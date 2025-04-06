@@ -39,6 +39,8 @@ def scan_vmid(datastore, vmid, all):
             print("-" * 86)
         chunkarray = set()
 
+        totals = {"new_chunks": 0, "new_chunks_bytes": 0}
+
         for filepath in filearray:
             snapshot = os.path.basename(os.path.dirname(filepath))
             filename = os.path.basename(filepath)
@@ -72,10 +74,15 @@ def scan_vmid(datastore, vmid, all):
                         snapshots[snapshot] = images
                     images += [{"filename": filename, "new_chunks": new_chunks, "new_chunks_bytes": new_chunks * 4194304}]
                 else:
-                    print(f"| {snapshot.ljust(20)} | {filename.ljust(18)} | {new_chunks:>12} chunks | {new_chunks * 4:>12} MiB |")
+                    print(f"| {snapshot.ljust(20)} | {filename.ljust(18)} | {new_chunks:>12} chunks | {new_chunks * 4:>12.2f} MiB |")
+
+                totals["new_chunks"] += new_chunks
+                totals["new_chunks_bytes"] += new_chunks * 4194304
         if format_json:
-            return snapshots
+            return {"snapshots": snapshots, "totals": totals}
         else:
+            print("-" * 86)
+            print(f"| {'TOTAL'.ljust(20)} | {''.ljust(18)} | {totals['new_chunks']:>12} chunks | {totals['new_chunks'] * 4:>12.2f} MiB |")
             print("-" * 86)
 
     return None
@@ -116,10 +123,10 @@ if __name__ == "__main__":
     for vmid in vmids_list:
         if not format_json:
             print("vmid = %s" % vmid)
-        snapshots = scan_vmid(datastore_path, vmid, all)
+        result = scan_vmid(datastore_path, vmid, all)
 
         if format_json:
-            vmids += [{"vmid": vmid, "snapshots": snapshots}]
+            vmids += [{"vmid": vmid, "totals": result["totals"], "snapshots": result["snapshots"]}]
     if format_json:
         print(json.dumps(vmids))
 
